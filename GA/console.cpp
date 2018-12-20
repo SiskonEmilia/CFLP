@@ -78,15 +78,28 @@ int main() {
     // start timer //
     start = time(nullptr);
 
+    for (auto& individual : *population) {
+        if (individual.getCost() < bestScore.getCost()) {
+          bestScore = individual;
+        }
+    }
+
+    while (bestScore.getCost() == INT32_MAX) {
+      bestScore = Individual();
+      population->push_back(bestScore);
+    }
+
+    int tempSize = 0;
     do {
       // create a new population //
       newPopulation = new vector<Individual>;
 
       // randomly select two player to compare // 
       // place the better one into the new population //
+      tempSize = population->size();
       for (int i = 0; i < pairSize * 2 + 1; ++i) {
-        auto &player1 = (*population)[rand() % populationSize],
-          &player2 = (*population)[rand() % populationSize];
+        auto &player1 = (*population)[rand() % tempSize],
+          &player2 = (*population)[rand() % tempSize];
         if (player1.getCost() < player2.getCost()) {
           newPopulation->push_back(player1);
         } else {
@@ -102,15 +115,12 @@ int main() {
         int *gene1 = (*newPopulation)[i * 2].getGeneCopy(),
           *gene2 = (*newPopulation)[i * 2 + 1].getGeneCopy();
         int tryCount = 0;
-        do {
-          // try your best to have valid child //
-          Individual::onePointCrossover(gene1, gene2);
-          Individual::twoPointsCrossover(gene1, gene2);
-          Individual::mutate(gene1);
-          Individual::mutate(gene2);
-          ++tryCount;
-        } while((!Individual::isValid(gene1) && !Individual::isValid(gene2)) 
-          && (tryCount < 1000));
+        // try your best to have valid child //
+        Individual::onePointCrossover(gene1, gene2);
+        Individual::twoPointsCrossover(gene1, gene2);
+        Individual::mutate(gene1);
+        Individual::mutate(gene2);
+        ++tryCount;
         
         // Put children into new population //
         newPopulation->push_back(Individual(gene1));
@@ -124,14 +134,9 @@ int main() {
         }
       }
 
-      // Kill the old generation //
-      delete population;
-      // Time goes in turn //
-      population = newPopulation;
-
       // Are the best still him? //
       if (bestScore.getCost() == scoreRecord) {
-        if (++count > 180000) {
+        if (++count > 100000) {
           // After 180000 times of trying, I give up find a better one //
           time_t timeSpent = time(nullptr) - start;
           csvOutput << "p" << number << "," << scoreRecord
@@ -152,16 +157,22 @@ int main() {
             detailOutput << solution[t] << " ";
           }
           detailOutput << endl;
-          delete newPopulation;
           cout << "p" << number << " Done" << endl;
+          delete population;
+          delete newPopulation;
           break;
         }
       } else {
         // Oh! A new king! //
-        cout << "New Best At" << count << " :" << scoreRecord << endl;
         scoreRecord = bestScore.getCost();
+        cout << "New Best At " << count << " :" << scoreRecord << endl;
         count = 0;
       }
+
+      // Kill the old generation //
+      delete population;
+      // Time goes in turn //
+      population = newPopulation;
     } while (true);
   }
   if (facilities != nullptr) delete[] facilities;

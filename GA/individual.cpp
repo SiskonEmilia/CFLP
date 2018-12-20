@@ -200,25 +200,25 @@ Individual::Individual() {
   this->gene = new int[CUSTOMER_NUM];
   
   // Sequence used to check the facility capacity //
-  int* facilities = new int[FACILITY_NUM];
-  for (int i = 0; i < FACILITY_NUM; ++i) {
-    facilities[i] = 0;
-  }
+  // int* facilities = new int[FACILITY_NUM];
+  // for (int i = 0; i < FACILITY_NUM; ++i) {
+  //   facilities[i] = 0;
+  // }
 
   
   for (int i = 0; i < CUSTOMER_NUM; ++i) {
     // Random until valid //
-    do {
+    // do {
       // Assign a random facility to each customer //
       gene[i] = rand() % FACILITY_NUM;
-    } while (CUSTOMER_DEMAND[i] + 
-      facilities[gene[i]] > FACILITY_CAPACITY[gene[i]]);
+    // } while (CUSTOMER_DEMAND[i] + 
+    //   facilities[gene[i]] > FACILITY_CAPACITY[gene[i]]);
   }
   
   // Estimate the cost //
   cost = estimateCost(*this);
   // Free allocated memory space //
-  delete[] facilities;
+  // delete[] facilities;
 }
 
 Individual::~Individual() {
