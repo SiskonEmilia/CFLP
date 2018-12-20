@@ -1,4 +1,3 @@
-#define DEBUG_MODE
 #include "individual.hpp"
 #include <iostream>
 #include <ctime>
@@ -11,21 +10,26 @@
 using namespace std;
 
 int main() {
+  // Log file stream initializing //
   ofstream csvOutput;
   ofstream detailOutput;
   csvOutput.open("result.csv");
   detailOutput.open("detail.txt");
   csvOutput << ",Result,Time(s)\n";
+
+  // Timer //
   time_t start;
+  // Status monitor //
   int count = 0, scoreRecord;
-  int consumerNum, facilityNum;
   int* facilities = nullptr;
+  // Case info //
+  int consumerNum, facilityNum;
 
   // Set possibility for crossover and mutating //
   int crossover_rate, mutating_rate;
   do{
     cout << "Set your possibility of crossover and mutating (in percentage): " << endl
-    << "(format: {crossover_rate} {mutating_rate}, e.g. 10 50)" << endl;
+    << "(format: {crossover_rate} {mutating_rate}, recommend: 20 5)" << endl;
     cin >> crossover_rate >> mutating_rate;
   } while((crossover_rate > 100 || mutating_rate > 100 ||
     crossover_rate < 0 || mutating_rate < 0) && 
@@ -37,13 +41,14 @@ int main() {
     cout << "Set your population size (can be divided by 4):";
     cin >> populationSize;
     pairSize = populationSize / 4;
-  } while(populationSize <= 0 && populationSize % 4 != 0  && cout << "Population size should be larger than 0 and can be divided by 4." << endl);
+  } while(populationSize <= 0 && populationSize % 4 != 0  && cout << "Population size should be larger than 0 and can be divided by 4. (recommend: 20)" << endl);
 
   
   Individual::setGAFactors(crossover_rate, mutating_rate);
 
-  // Load the file //
+  // Directory path //
   string rootDir = "./Instances/p";
+  // Load each file and execute algorithm //
   for (int number = 1; number < 72; ++number) {
   
     try {
@@ -58,6 +63,7 @@ int main() {
       return 0;
     }
   
+    // Initializing for case //
     count = 0;
     Individual bestScore;
     vector<Individual> *population = new vector<Individual>(populationSize);
@@ -69,10 +75,15 @@ int main() {
     if (facilities != nullptr) delete[] facilities;
     facilities = new int[facilityNum];
     for (int i = 0; i < facilityNum; ++i) facilities[i] = 0;
+    // start timer //
     start = time(nullptr);
 
     do {
+      // create a new population //
       newPopulation = new vector<Individual>;
+
+      // randomly select two player to compare // 
+      // place the better one into the new population //
       for (int i = 0; i < pairSize * 2 + 1; ++i) {
         auto &player1 = (*population)[rand() % populationSize],
           &player2 = (*population)[rand() % populationSize];
@@ -83,13 +94,16 @@ int main() {
         }
       }
 
+      // reserve the best one //
       newPopulation->push_back(bestScore);
 
+      // Find your mate and do something //
       for (int i = 0; i < pairSize + 1; ++i) {
         int *gene1 = (*newPopulation)[i * 2].getGeneCopy(),
           *gene2 = (*newPopulation)[i * 2 + 1].getGeneCopy();
         int tryCount = 0;
         do {
+          // try your best to have valid child //
           Individual::onePointCrossover(gene1, gene2);
           Individual::twoPointsCrossover(gene1, gene2);
           Individual::mutate(gene1);
@@ -97,20 +111,28 @@ int main() {
           ++tryCount;
         } while((!Individual::isValid(gene1) && !Individual::isValid(gene2)) 
           && (tryCount < 1000));
+        
+        // Put children into new population //
         newPopulation->push_back(Individual(gene1));
         newPopulation->push_back(Individual(gene2));
       }
 
+      // Find the best one //
       for (auto& individual : *newPopulation) {
         if (individual.getCost() < bestScore.getCost()) {
           bestScore = individual;
         }
       }
 
+      // Kill the old generation //
       delete population;
+      // Time goes in turn //
       population = newPopulation;
+
+      // Are the best still him? //
       if (bestScore.getCost() == scoreRecord) {
         if (++count > 180000) {
+          // After 180000 times of trying, I give up find a better one //
           time_t timeSpent = time(nullptr) - start;
           csvOutput << "p" << number << "," << scoreRecord
             << "," <<  timeSpent<< "\n";
@@ -135,6 +157,7 @@ int main() {
           break;
         }
       } else {
+        // Oh! A new king! //
         cout << "New Best At" << count << " :" << scoreRecord << endl;
         scoreRecord = bestScore.getCost();
         count = 0;

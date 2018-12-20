@@ -6,7 +6,6 @@
 using std::ifstream;
 using std::rand;
 using std::swap;
-#define DEBUG_MODE
 #ifdef DEBUG_MODE
 #include <iostream>
 using std::cout;
@@ -23,6 +22,7 @@ int*   Individual::FACILITY_CAPACITY = nullptr;
 int Individual::CROSSOVER_RATE    = 0;
 int Individual::MUTATION_RATE     = 0;   
 
+// Clear all data and recycle memory space allocated //
 void Individual::clearData() {
   if (ASSIGN_COST != nullptr){
     for (int i = 0; i < CUSTOMER_NUM; ++i) {
@@ -43,10 +43,9 @@ void Individual::clearData() {
     delete[] FACILITY_CAPACITY;
     FACILITY_CAPACITY = nullptr;
   }
-  // FACILITY_NUM = CUSTOMER_NUM = 0;
-  // CROSSOVER_RATE = MUTATION_RATE = 0.0;
 }
 
+// Initialize case info with the given file //
 void Individual::init(string filePath) {
   // Create a input file stream //
   ifstream is;
@@ -89,6 +88,7 @@ void Individual::init(string filePath) {
     }
   }
 
+  // Debug info //
   #ifdef DEBUG_MODE
     cout << "Status after reading data:" << endl
       << "Facility Number: " << FACILITY_NUM << endl
@@ -118,36 +118,49 @@ void Individual::init(string filePath) {
   #endif
 }
 
+// Set crossover rate and mutating rate //
 void Individual::setGAFactors(int CROSSOVER_RATE,
   int MUTATION_RATE) {
   Individual::CROSSOVER_RATE = CROSSOVER_RATE;
   Individual::MUTATION_RATE = MUTATION_RATE;
 }
 
+// Estimate the cost of current solution //
 int Individual::estimateCost(Individual& individual) {
+  // If this solution is not a legal one, return the max cost //
   if (!isValid(individual.gene))
     return INT32_MAX;
+  
+  // Store the status of each facility //
   bool* facilities = new bool[FACILITY_NUM];
   int cost = 0;
   for (int i = 0; i < FACILITY_NUM; ++i) {
     facilities[i] = false;
   }
 
+  // Count the cost //
   for (int i = 0; i < CUSTOMER_NUM; ++i) {
     if (facilities[individual.gene[i]] == false) {
+      // Open the facility and count the cost //
       cost += OPEN_COST[individual.gene[i]];
       facilities[individual.gene[i]] = true;
     }
+    // Count assignment cost //
     cost += ASSIGN_COST[i][individual.gene[i]];
   }
 
+  // Free allocated memory space //
   delete []facilities;
+  // Update and return the cost //
   return individual.cost = cost;
 }
 
+// One-point crossover //
 void Individual::onePointCrossover(int* parentGene1,
   int* parentGene2) {
+    // If they are lucky enough to get crossover? //
     if (rand() % 100 < (CROSSOVER_RATE / 2)) {
+      // Find the crossover point, then swap all gene before it //
       int swapPoint = rand() % CUSTOMER_NUM;
       for (int i = 0; i < swapPoint; ++i) {
         swap(parentGene1[i], parentGene2[i]);
@@ -155,53 +168,68 @@ void Individual::onePointCrossover(int* parentGene1,
     }
 }
 
+// Two-points crossover //
 void Individual::twoPointsCrossover(int* parentGene1,
   int* parentGene2) {
-  if (rand() % 100 < (CROSSOVER_RATE / 2)) {
-    int swapPoint1 = rand() % CUSTOMER_NUM;
-    int swapPoint2 = rand() % CUSTOMER_NUM;
-    if (swapPoint2 < swapPoint1) swap(swapPoint1, swapPoint2);
-    for (int i = swapPoint1; i <= swapPoint2; ++i) {
-      swap(parentGene1[i], parentGene2[i]);
+    // If they are lucky enough to get crossover? //
+    if (rand() % 100 < (CROSSOVER_RATE / 2)) {
+      // Find the crossover points, then swap all gene in between //
+      int swapPoint1 = rand() % CUSTOMER_NUM;
+      int swapPoint2 = rand() % CUSTOMER_NUM;
+      if (swapPoint2 < swapPoint1) swap(swapPoint1, swapPoint2);
+      for (int i = swapPoint1; i <= swapPoint2; ++i) {
+        swap(parentGene1[i], parentGene2[i]);
+      }
     }
-  }
 }
 
 void Individual::mutate(int* gene) {
+  // If you're lucky enough, you can mutate to the end of world //
   while(rand() % 100 < MUTATION_RATE) {
     gene[rand() % CUSTOMER_NUM] = rand() % FACILITY_NUM;
   }
 
+  // There's also possibility for gene to change some info on the same DNA chain //
   while(rand() % 100 < MUTATION_RATE) {
     swap(gene[rand() % CUSTOMER_NUM], gene[rand() % CUSTOMER_NUM]);
   }
 }
 
 Individual::Individual() {
+  // Brand new gene //
   this->gene = new int[CUSTOMER_NUM];
   
+  // Sequence used to check the facility capacity //
   int* facilities = new int[FACILITY_NUM];
   for (int i = 0; i < FACILITY_NUM; ++i) {
     facilities[i] = 0;
   }
 
+  
   for (int i = 0; i < CUSTOMER_NUM; ++i) {
+    // Random until valid //
     do {
+      // Assign a random facility to each customer //
       gene[i] = rand() % FACILITY_NUM;
     } while (CUSTOMER_DEMAND[i] + 
       facilities[gene[i]] > FACILITY_CAPACITY[gene[i]]);
   }
   
+  // Estimate the cost //
   cost = estimateCost(*this);
+  // Free allocated memory space //
   delete[] facilities;
 }
 
 Individual::~Individual() {
+  // Free allocated memory space //
   if (gene != nullptr) delete[] gene;
 }
 
 Individual::Individual(int* gene) {
+  // Copy gene //
   this->gene = gene;
+  // Get Cost //
   cost = estimateCost(*this);
 }
 
@@ -209,7 +237,9 @@ int* Individual::getSolution() {
   return gene;
 }
 
+// Check whether this solution match requirement //
 bool Individual::isValid(int* gene) {
+  // Count demand //
   int* facilities = new int[FACILITY_NUM];
   bool flag = true;
   for (int i = 0; i < FACILITY_NUM; ++i) {
@@ -219,10 +249,12 @@ bool Individual::isValid(int* gene) {
   for (int i = 0; i < CUSTOMER_NUM; ++i) {
     facilities[gene[i]] += CUSTOMER_DEMAND[i];
     if (facilities[gene[i]] > FACILITY_CAPACITY[gene[i]]) {
+      // Overflow! Not a valid solution //
       flag = false;
     }
   }
 
+  // Free allocated memory //
   delete[] facilities;
   return flag;
 }
@@ -230,11 +262,14 @@ bool Individual::isValid(int* gene) {
 Individual::Individual(const Individual& individual) {
   gene = new int[CUSTOMER_NUM];
   for (int i = 0; i < CUSTOMER_NUM; ++i) {
+    // Copy gene //
     gene[i] = individual.gene[i];
   }
+  // Copy cost //
   cost = individual.cost;
 }
 
+// Similar to copy constructor //
 Individual& Individual::operator=(const Individual& individual) {
   if (gene == nullptr) gene = new int[CUSTOMER_NUM];
   for (int i = 0; i < CUSTOMER_NUM; ++i) {
@@ -244,6 +279,7 @@ Individual& Individual::operator=(const Individual& individual) {
   return *this;
 }
 
+// Get a copy of gene //
 int* Individual::getGeneCopy() {
   int *copy = new int[CUSTOMER_NUM];
   for (int i = 0; i < CUSTOMER_NUM; ++i)
@@ -251,10 +287,12 @@ int* Individual::getGeneCopy() {
   return copy;
 }
 
+// Get cost //
 int Individual::getCost() {
   return cost;
 }
 
+// Get case info //
 int Individual::getFacilityNum() {
   return FACILITY_NUM;
 }
