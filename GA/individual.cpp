@@ -25,7 +25,7 @@ int Individual::MUTATION_RATE     = 0;
 // Clear all data and recycle memory space allocated //
 void Individual::clearData() {
   if (ASSIGN_COST != nullptr){
-    for (int i = 0; i < CUSTOMER_NUM; ++i) {
+    for (int i = 0; i < FACILITY_NUM; ++i) {
       delete[] ASSIGN_COST[i];
     }
     delete[] ASSIGN_COST;
@@ -79,10 +79,10 @@ void Individual::init(string filePath) {
   }
 
   // Assign Cost //
-  ASSIGN_COST = new int*[CUSTOMER_NUM];
-  for (int i = 0; i < CUSTOMER_NUM; ++i) {
-    ASSIGN_COST[i] = new int[FACILITY_NUM];
-    for (int t = 0; t < FACILITY_NUM; ++t) {
+  ASSIGN_COST = new int*[FACILITY_NUM];
+  for (int i = 0; i < FACILITY_NUM; ++i) {
+    ASSIGN_COST[i] = new int[CUSTOMER_NUM];
+    for (int t = 0; t < CUSTOMER_NUM; ++t) {
       is >> temp;
       ASSIGN_COST[i][t] = temp;
     }
@@ -94,8 +94,8 @@ void Individual::init(string filePath) {
       << "Facility Number: " << FACILITY_NUM << endl
       << "Customer Number: " << CUSTOMER_NUM << endl
       << "Assign Cost: " << endl;
-    for (int i = 0; i < CUSTOMER_NUM; ++i) {
-      for (int t = 0; t < FACILITY_NUM; ++t) {
+    for (int i = 0; i < FACILITY_NUM; ++i) {
+      for (int t = 0; t < CUSTOMER_NUM; ++t) {
         cout << ASSIGN_COST[i][t] << " ";
       }
       cout << endl;
@@ -146,7 +146,7 @@ int Individual::estimateCost(Individual& individual) {
       facilities[individual.gene[i]] = true;
     }
     // Count assignment cost //
-    cost += ASSIGN_COST[i][individual.gene[i]];
+    cost += ASSIGN_COST[individual.gene[i]][i];
   }
 
   // Free allocated memory space //
